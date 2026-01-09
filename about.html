@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - State-Tracking Research</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <h1 class="logo">Research Blog</h1>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="about.html">About</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <article class="post-content">
+            <h1>About This Research</h1>
+            
+            <h2>The Paper</h2>
+            <p>
+                This blog accompanies our paper <strong>"Understanding State-Tracking in Linear RNNs 
+                for Code Execution"</strong>, which investigates why theoretically capable architectures 
+                fail to learn state-tracking from standard training data.
+            </p>
+            
+            <h2>Key Contributions</h2>
+            <ul>
+                <li>We translate permutation group tasks into Python REPL traces for next-token prediction</li>
+                <li>We identify that dense intermediate state supervision is critical for learnability</li>
+                <li>We show DeltaNet[-1,1] learns and extrapolates state-tracking where transformers fail</li>
+                <li>We analyze challenges in real code: probabilistic transitions and tokenization discontinuity</li>
+            </ul>
+            
+            <h2>Resources</h2>
+            <ul>
+                <li><a href="#">Paper (ICLR 2026)</a></li>
+                <li><a href="#">Code Repository</a></li>
+                <li><a href="#">Dataset</a></li>
+            </ul>
+            
+            <h2>Contact</h2>
+            <p>For questions about this research, please contact the authors.</p>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Research Blog</p>
+    </footer>
+</body>
+</html>
