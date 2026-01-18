@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Why Code World Models Need State-Tracking Architectures - Blog</title>
-    <link rel="stylesheet" href="../styles/main.css?v=4">
-    <link rel="stylesheet" href="../styles/post.css?v=14">
+    <title>Debugging Code World Models - Blog</title>
+    <link rel="stylesheet" href="../styles/main.css?v=5">
+    <link rel="stylesheet" href="../styles/post.css?v=20">
     <!-- KaTeX for math rendering -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -25,23 +25,32 @@
     </script>
 </head>
 <body>
-    <header>
-        <nav>
-            <h1 class="logo">Research Blog</h1>
-            <ul class="nav-links">
-                <li><a href="../index.html">Home</a></li>
-                <li><a href="../about.html">About</a></li>
-            </ul>
-        </nav>
-    </header>
-
     <main>
         <article class="post-content">
-            <h1>Why Code World Models Need State-Tracking Architectures</h1>
-            <p class="post-meta">
-                <span class="post-date">January 7, 2026</span>
-                <span class="reading-time">~15 min read</span>
-            </p>
+            <div class="post-header">
+                <h1>Debugging Code World Models</h1>
+                <p class="post-authors">Babak Rahmani · Julien Siems · Riccardo Grazzi</p>
+                <p class="post-meta">
+                    <span class="post-date">January 2026</span>
+                    <span class="reading-time">~15 min read</span>
+                </p>
+            </div>
+            
+            <!-- Report Tabs -->
+            <div class="report-tabs">
+                <a href="../assets/reports/cruxeval_failure_report.html" class="report-tab" target="_blank">
+                    <span class="tab-label">CruxEval Report</span>
+                    <span class="tab-arrow">↗</span>
+                </a>
+                <a href="../assets/reports/humaneval_failure_report.html" class="report-tab" target="_blank">
+                    <span class="tab-label">HumanEval Report</span>
+                    <span class="tab-arrow">↗</span>
+                </a>
+                <a href="../assets/reports/nesting_report.html" class="report-tab" target="_blank">
+                    <span class="tab-label">Nesting Report</span>
+                    <span class="tab-arrow">↗</span>
+                </a>
+            </div>
             
             <div class="post-tags">
                 <span class="tag">Code World Models</span>
@@ -51,21 +60,30 @@
             </div>
 
             <div class="figure-container" style="margin-top: 2rem;">
-                <img src="../assets/images/gpt5_cwm_comparison_bar-1.png" alt="GPT-5 vs CWM accuracy comparison on S5 permutation tracking" style="max-width: 70%;">
+                <div style="display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap;">
+                    <img src="../assets/images/gpt5_cwm_comparison_bar-1.png" alt="GPT-5 vs CWM accuracy comparison on S5 permutation tracking" style="max-width: 48%; height: auto;">
+                    <img src="../assets/images/composition_accuracy_with_flattening.png" alt="Composition accuracy by depth" style="max-width: 48%; height: auto;">
+                </div>
                 <p class="figure-caption">
-                    <strong>Main Result:</strong> CWM significantly outperforms GPT-5 on $S_5$ 
-                    permutation tracking, especially at longer sequence lengths.
+                    <strong>Figure 1:</strong> <strong>(Left)</strong> Accuracy on $S_5$ permutation tracking across sequence lengths (8–128 swaps). 
+                    CWM baseline generates both commands and states; CWM+TF (teacher forcing) receives ground-truth commands 
+                    and only predicts states. GPT-5 degrades rapidly while CWM+TF maintains high accuracy, showing the model 
+                    can track state when given correct actions. 
+                    <strong>(Right)</strong> Composition accuracy on nested string functions (depths 1–5). Observed accuracy 
+                    falls far below the theoretical baseline (dashed) computed from atomic accuracy. 
+                    Flattening nested calls into sequential assignments (red) provides modest improvement but cannot 
+                    close the gap.
                 </p>
             </div>
 
-            <!-- Section 1: World Models and Code World Models -->
+            <!-- Section 1: World Models -->
             <section id="introduction">
-                <h2>1. World Models and Code World Models</h2>
+                <h2>1. World Models</h2>
                 
                 <p>
                     <strong>World models (WMs)</strong> are a framework for prediction (simulation) and planning: 
                     you learn a model of how an environment evolves, then you can "roll it forward" to see 
-                    the result of an action. WMs were first popularized in images/videos, such as Genie <a href="#ref-genie">[1]</a> a game-like 
+                    the result of an action. WMs were first popularized in images/videos, such as Genie <a href="#ref-genie">[1]</a> in game-like 
                     settings where an agent interacts with an environment; the promise is that the agent can 
                     learn new abilities by interacting with the learned simulator, enabling more open-ended 
                     behavior (e.g., exploration, long-horizon planning, skill acquisition).
@@ -73,7 +91,9 @@
 
                 <p>
                     Recently, there have been several works that treat language models trained on text as 
-                    world models. The key difference from a standard language model is the <em>training interface</em>: 
+                    world models, including for text-based games <a href="#ref-plm">[3]</a>, general game playing <a href="#ref-ggp">[4]</a>, 
+                    and code generation guided by MCTS <a href="#ref-mcts">[5]</a><a href="#ref-worldcoder">[6]</a>. 
+                    The key difference from a standard language model is the <em>training interface</em>: 
                     an explicit <strong>action + state</strong> format. For example, a <strong>code world model (CWM)</strong> <a href="#ref-cwm">[2]</a> 
                     is trained on traces that look like:
                 </p>
@@ -94,51 +114,382 @@
                 <p>
                     This turns code execution into a supervised "simulate the next state" problem. The CWM paper 
                     reports that this kind of training improves downstream performance on software-engineering 
-                    style benchmarks (e.g., SWE-bench), because the model is pushed to be faithful to runtime 
-                    state rather than only producing plausible text.
+                    style benchmarks (e.g., SWE-bench).
                 </p>
 
                 <h3>The Connection to State-Tracking</h3>
                 <p>
                     This format is closely related to what the model-architecture community calls 
-                    <strong>state tracking</strong>—often studied through finite-state automata and long-horizon 
-                    length generalization. Architecture matters: some recurrent models can represent these 
-                    transition systems very naturally, and they often generalize more reliably in strict 
-                    state-tracking regimes. Pure Transformers, especially without an explicit recurrent/state 
-                    interface, can struggle to faithfully track latent state over long sequences, even if they 
-                    can fit short contexts. Alternative recurrent architectures (including linear RNN/SSM-style 
-                    models, and hybrids) can also learn state tracking under specific conditions, particularly 
-                    when the supervision aligns with the underlying state.
+                    <strong>state tracking</strong>, often studied through finite-state automata and long-horizon 
+                    length generalization <a href="#ref-merrill">[7]</a><a href="#ref-liu">[8]</a>. 
+                    Theoretical work has shown that log-precision transformers face fundamental limitations 
+                    in simulating finite automata <a href="#ref-merrill">[7]</a>, while recurrent architectures 
+                    can represent these transition systems more naturally. Recent work on linear RNNs and 
+                    state space models <a href="#ref-orvieto">[9]</a> demonstrates that careful initialization 
+                    of recurrence eigenvalues enables reliable state tracking over long sequences. These 
+                    findings suggest that the choice of architecture, and its alignment with the supervision 
+                    structure, determines whether models can faithfully track latent state.
                 </p>
 
                 <p>
-                    What's interesting is that CWMs seem to learn faithful state tracking for real code 
-                    snippets—despite typically using a Transformer backend. That raises the questions:
+                    <strong>World modeling should solve state-tracking. But Transformers can't track state. 
+                    CWM is a Transformer-based world model. </strong> Something has to give...
                 </p>
 
                 <div class="key-question">
                     <ul style="margin: 0; padding-left: 1.2rem;">
-                        <li>How do CWM-style models perform on pure state-tracking datasets?</li>
-                        <li>Why can a Transformer-backed model succeed here—what is the mechanism (training format, supervision density, inductive bias)?</li>
-                        <li>What are the implications for data efficiency and for inference cost (e.g., how many generated tokens / intermediate states are needed)?</li>
+                        <li><strong>Where does it break?</strong> On which code patterns does CWM's state-tracking fail?</li>
+                        <li><strong>Why?</strong> What mechanism explains both its successes and its failures?</li>
+                        <li><strong>Can we fix it?</strong> Can we recover accuracy by engineering around the limitations?</li>
+                        <li><strong>At what cost?</strong> What are the efficiency implications for training and inference?</li>
                     </ul>
                 </div>
 
                 <p>
-                    In this post, I use a <strong>state-tracking lens</strong> to answer these questions and 
-                    explain what my results say about when and why "action + state" training turns a language 
-                    model into something much closer to a world model.
+                    In this post, we use a <strong>state-tracking lens</strong> to answer these questions.
                 </p>
             </section>
 
-            <!-- Section 2: Group Algebraic Problem -->
-            <section id="group-problem">
-                <h2>2. The Group Algebraic Problem: Permutation Tracking</h2>
+            <!-- Section 2: Evaluation on Code Benchmarks -->
+            <section id="evaluation">
+                <h2>2. Evaluation on Code Benchmarks</h2>
                 
-                <h3>The Shell Game Analogy</h3>
+                <p>
+                    We evaluated CWM on two standard code execution benchmarks: <strong>CruxEval-O</strong> <a href="#ref-cruxeval">[11]</a>
+                    (output prediction) and <strong>HumanEval</strong> <a href="#ref-humaneval">[12]</a> (function execution), as well as 
+                    the <strong>Nesting</strong> dataset <a href="#ref-nesting">[10]</a> that probes compositional execution 
+                    of nested string manipulation functions (e.g., <code>upper(replace(strip(x)))</code>). 
+                    Table 1 summarizes the results.
+                </p>
+
+                <div class="comparison-table">
+                    <p style="text-align: center; font-weight: bold; margin-bottom: 0.5rem;">Table 1: CWM accuracy on code execution benchmarks</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Benchmark</th>
+                                <th>Samples</th>
+                                <th>Baseline Accuracy</th>
+                                <th>After Intervention</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>CruxEval-O</td>
+                                <td>800</td>
+                                <td>85.1%</td>
+                                <td><strong>90.4%</strong></td>
+                            </tr>
+                            <tr>
+                                <td>HumanEval</td>
+                                <td>723</td>
+                                <td>91.4%</td>
+                                <td><strong>—</strong></td>
+                            </tr>
+                            <tr style="border-top: 2px solid #ddd;">
+                                <td>Nesting (depth=2)</td>
+                                <td>100</td>
+                                <td>75%</td>
+                                <td><strong>78%</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Nesting (depth=3)</td>
+                                <td>100</td>
+                                <td>58%</td>
+                                <td><strong>63%</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Nesting (depth=4)</td>
+                                <td>100</td>
+                                <td>39%</td>
+                                <td><strong>43%</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Nesting (depth=5)</td>
+                                <td>100</td>
+                                <td>25%</td>
+                                <td><strong>28%</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>
+                    These baselines are strong but reveal systematic failure patterns. Error analysis 
+                    (detailed in the <a href="../assets/reports/cruxeval_failure_report.html" target="_blank">CruxEval</a>, 
+                    <a href="../assets/reports/humaneval_failure_report.html" target="_blank">HumanEval</a>, and 
+                    <a href="../assets/reports/nesting_report.html" target="_blank">Nesting</a> reports) identifies three primary failure modes: 
+                    <strong>compositionality</strong> (nested expressions hiding intermediate values), 
+                    <strong>tokenization discontinuity</strong> (string operations breaking token boundaries), 
+                    and <strong>trace truncation</strong> (loops generating traces that exceed the 32K token limit). 
+                    We examine each below.
+                </p>
+
+                <p>
+                    <strong>Figure 2</strong> illustrates the first two challenges and a potential resolution strategy. 
+                    On the left, nested function calls hide intermediate values that CWM never sees during trace generation. 
+                    On the right, string operations require character-level iteration that changes tokenization entirely. 
+                    In both cases, <em>decomposing</em> the expression into explicit steps can expose these hidden states, 
+                    restoring the dense supervision CWM relies on. We explore these interventions in <a href="#interventions">Section 4</a>.
+                </p>
+
+                <div class="transformation-figure">
+                    <!-- Composition Panel -->
+                    <div class="transformation-panel">
+                        <div class="transformation-panel-header composition">
+                            🔗 Composition
+                        </div>
+                        <div class="transformation-content">
+                            <div class="transform-block original-block">
+                                <div class="transform-label original">Original Code</div>
+                                <div class="transform-code">
+<span class="variable">nums</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">2</span>, <span class="number">1</span>]
+<span class="variable">n</span> = <span class="number">2</span>
+<span class="variable">output</span> = []
+<span class="variable">output</span>.<span class="function">append</span>((<span class="variable">nums</span>.<span class="function">count</span>(<span class="variable">n</span>), <span class="variable">n</span>))
+                                </div>
+                            </div>
+                            
+                            <div class="transform-arrow">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+                            </div>
+                            
+                            <div class="transform-block transformed-block">
+                                <div class="transform-label transformed">Decomposed</div>
+                                <div class="transform-code">
+<span class="temp-var">_t0</span> = <span class="variable">nums</span>.<span class="function">count</span>(<span class="variable">n</span>)  <span class="comment"># hidden!</span>
+<span class="temp-var">_t1</span> = (<span class="temp-var">_t0</span>, <span class="variable">n</span>)           <span class="comment"># hidden!</span>
+<span class="variable">output</span>.<span class="function">append</span>(<span class="temp-var">_t1</span>)
+                                </div>
+                            </div>
+                            
+                            <div class="transform-insight">
+                                <strong>Issue:</strong> Nested calls hide intermediate values 
+                                (<code>_t0</code>, <code>_t1</code>) — effective reveal spacing &gt; 1
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- String Manipulation Panel -->
+                    <div class="transformation-panel">
+                        <div class="transformation-panel-header string-manip">
+                            📝 String Manipulation
+                        </div>
+                        <div class="transformation-content">
+                            <div class="transform-block original-block">
+                                <div class="transform-label original">Original Code</div>
+                                <div class="transform-code">
+<span class="variable">text</span> = <span class="string">"abracadabra"</span>
+<span class="variable">char</span> = <span class="string">"c"</span>
+<span class="variable">pos</span> = <span class="variable">text</span>.<span class="function">index</span>(<span class="variable">char</span>)
+                                </div>
+                            </div>
+                            
+                            <div class="transform-arrow">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+                            </div>
+                            
+                            <div class="transform-block transformed-block">
+                                <div class="transform-label transformed">Explicit Loop</div>
+                                <div class="transform-code">
+<span class="temp-var">_t0</span> = <span class="function">list</span>(<span class="variable">text</span>)
+<span class="temp-var">_t1</span> = <span class="number">-1</span>
+<span class="keyword">for</span> <span class="temp-var">_t2</span> <span class="keyword">in</span> <span class="function">range</span>(<span class="function">len</span>(<span class="temp-var">_t0</span>)):
+    <span class="keyword">if</span> <span class="temp-var">_t0</span>[<span class="temp-var">_t2</span>] == <span class="variable">char</span>:
+        <span class="temp-var">_t1</span> = <span class="temp-var">_t2</span>
+        <span class="keyword">break</span>
+<span class="variable">pos</span> = <span class="temp-var">_t1</span>
+                                </div>
+                            </div>
+                            
+                            <div class="transform-insight">
+                                <strong>Issue:</strong> String→list conversion changes tokenization; 
+                                loop iterations create many hidden states
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="figure-caption" style="text-align: center; margin-top: -0.5rem;">
+                    <strong>Figure 2:</strong> Two challenges in real code and potential decomposition strategies. 
+                    <strong>Left:</strong> Composition hides intermediate results in nested expressions. 
+                    <strong>Right:</strong> String manipulation requires tokenization changes and implicit iteration.
+                </p>
+
+                <h3>2.1 Challenge: Compositionality</h3>
+                
+                <p>
+                    As shown in Figure 2 (left), when commands are <em>composed</em> (nested within other commands 
+                    or combined into compound expressions), the reveal spacing effectively becomes greater than one. 
+                    The intermediate states between sub-operations are never exposed to the model.
+                </p>
+
+                <p>
+                    <strong>Experimental setup:</strong> Using the library of 25 deterministic 
+                    string-manipulation functions from the Nesting dataset <a href="#ref-nesting">[10]</a>, 
+                    we designed prompts for CWM and first evaluated on atomic (depth-1) calls. 
+                    We selected the 15 functions achieving ≥90% atomic accuracy (average: 95.3%), 
+                    then generated 100 test samples per depth for compositions from depth 1 to 5 
+                    (e.g., depth 3 = <code>func_A(func_B(func_C(x)))</code>).
+                </p>
+
+                <div class="figure-container">
+                    <img src="../assets/images/atomic_all25_accuracy_report.png" alt="Atomic Function Accuracy" style="max-width: 100%;">
+                    <p class="figure-caption">
+                        <strong>Figure 3:</strong> CWM atomic (depth-1) accuracy across all 25 string-manipulation functions. 
+                        Functions achieving ≥90% accuracy (above green dashed line) were selected for the composition 
+                        experiment, yielding 15 high-accuracy functions with average accuracy of 95.3%.
+                    </p>
+                </div>
+
+                <p>
+                    <strong>Results:</strong> At depth 5, observed accuracy (25%) is 
+                    <strong>50 percentage points below</strong> the theoretical baseline (78.6%) 
+                    computed from atomic accuracy (0.953⁵). This gap grows super-linearly with depth 
+                    (Figure 1, right), indicating compositional execution introduces errors beyond simple error propagation.
+                </p>
+
+                <h3>2.2 Challenge: Trace Truncation</h3>
+                <p>
+                    Dense state supervision has a hidden cost: <strong>token explosion</strong>. 
+                    When code contains loops, each iteration generates a full state snapshot. 
+                    For O(n²) algorithms or large inputs, traces can exceed the 32K token limit, 
+                    causing truncation before the final output is reached.
+                </p>
+                <p>
+                    In CruxEval, 6 samples failed because their traces exceeded the 32K token limit. 
+                    An additional 17 samples failed on loop/counter errors, where the model lost 
+                    track during long iterations even without truncation. Together, these reveal 
+                    a fundamental tension: the same dense supervision that enables reliable 
+                    state-tracking also creates traces too long to process.
+                </p>
+
+                <h3>2.3 Challenge: Tokenization Discontinuity</h3>
+                <p>
+                    String manipulation creates a challenge unrelated to supervision density: 
+                    <strong>minor semantic changes can cause dramatic shifts in tokenization</strong>. 
+                    A single character edit might transform a string from one token into five or more, 
+                    as illustrated in Figure 4.
+                </p>
+
+                <div class="tokenization-figure">
+                    <div class="tokenization-figure-title">Tokenization Discontinuity in String State-Tracking</div>
+                    
+                    <!-- Initial State -->
+                    <div class="tokenization-row">
+                        <div class="tokenization-label">Initial State:</div>
+                        <div class="tokenization-content">
+                            <div class="state-box">s = "abcdefghijklmnopqrstuvwxyz"</div>
+                        </div>
+                    </div>
+                    
+                    <div class="tokenization-row">
+                        <div class="tokenization-label">Tokenization:</div>
+                        <div class="tokenization-content">
+                            <span class="token blue">[alphabet_26]</span>
+                            <span class="token-count blue">1 token</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Edit 1 -->
+                    <div class="edit-marker">
+                        <span class="edit-badge">1</span>
+                        <span class="edit-text">Replace <code>'x'</code> → <code>'X'</code></span>
+                    </div>
+                    
+                    <div class="tokenization-row">
+                        <div class="tokenization-label">New State:</div>
+                        <div class="tokenization-content">
+                            <div class="state-box">s = "abcdefghijklmnopqrstuvw<span class="highlight-char">X</span>yz"</div>
+                        </div>
+                    </div>
+                    
+                    <div class="tokenization-row">
+                        <div class="tokenization-label">Tokenization:</div>
+                        <div class="tokenization-content">
+                            <span class="token orange">[abcdefghijklmnop]</span>
+                            <span class="token orange">[qrst]</span>
+                            <span class="token orange">[uvw]</span>
+                            <span class="token orange">[X]</span>
+                            <span class="token orange">[yz]</span>
+                            <span class="token-count orange">5 tokens</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Edit 2 -->
+                    <div class="edit-marker">
+                        <span class="edit-badge">2</span>
+                        <span class="edit-text">Insert space at position 13</span>
+                    </div>
+                    
+                    <div class="tokenization-row">
+                        <div class="tokenization-label">New State:</div>
+                        <div class="tokenization-content">
+                            <div class="state-box">s = "abcdefghijklm<span class="highlight-char"> </span>nopqrstuvw<span class="highlight-char">X</span>yz"</div>
+                        </div>
+                    </div>
+                    
+                    <div class="tokenization-row">
+                        <div class="tokenization-label">Tokenization:</div>
+                        <div class="tokenization-content">
+                            <span class="token green">[abcdefghijkl]</span>
+                            <span class="token green">[m]</span>
+                            <span class="token green">[ nop]</span>
+                            <span class="token green">[qrst]</span>
+                            <span class="token green">[uvw]</span>
+                            <span class="token green">[X]</span>
+                            <span class="token green">[yz]</span>
+                            <span class="token-count green">7 tokens</span>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="figure-caption" style="text-align: center; margin-top: -0.5rem;">
+                    <strong>Figure 4:</strong> Tokenization discontinuity in string state-tracking. 
+                    Minor edits (changing one character, inserting a space) cause radical changes 
+                    in BPE token segmentation—from a single token to 5–7 tokens with entirely different boundaries. 
+                    This makes string operations unpredictable for the model.
+                </p>
+
+                <p>
+                    This is problematic for state-tracking: two strings that differ by a single character 
+                    may have completely different token representations. The model cannot rely on 
+                    surface-level similarity to predict the next state, making string operations 
+                    a consistent source of errors.
+                </p>
+
+                <div class="takeaway-box">
+                    <strong>Key Insight:</strong> These challenges have different roots. 
+                    <strong>Compositionality</strong> and <strong>trace truncation</strong> are both 
+                    consequences of dense supervision: the first creates hidden states, the second 
+                    creates traces too long to process. <strong>Tokenization discontinuity</strong> 
+                    is a separate problem with how BPE tokenizers represent strings, independent of 
+                    supervision strategy.
+                </div>
+            </section>
+
+            <!-- Section 3: State-Tracking -->
+            <section id="state-tracking">
+                <h2>3. A State-Tracking Lens</h2>
+                
+                <p>
+                    Why does CWM succeed at state-tracking? The answer 
+                    lies in its training format: <strong>dense state supervision</strong>. CWM tracks 
+                    the state of <em>all variables after each command</em>—what we call 
+                    <strong>reveal spacing = 1</strong>. Every operation is followed by a complete 
+                    state snapshot, creating extremely dense supervision signal.
+                </p>
+
+                <p>
+                    This raises a natural question: <em>can we achieve reliable state-tracking with 
+                    sparser supervision?</em> To answer this, we need a controlled benchmark that 
+                    isolates state-tracking from other code complexities.
+                </p>
+
+                <h3>3.1 The Shell Game Benchmark</h3>
                 <p>
                     Imagine the classic shell game: three cups labeled A, B, C contain objects 1, 2, 3. 
-                    A dealer shuffles them—swapping pairs of cups—and you must track which object ends 
+                    A dealer shuffles them by swapping pairs of cups, and you must track which object ends 
                     up where. This is exactly what state-tracking requires: maintaining a mental model 
                     of system state through a sequence of operations.
                 </p>
@@ -152,18 +503,18 @@
                 <div class="figure-container">
                     <img src="../assets/images/s3_s3-code-1.png?v=2" alt="S3 Shell Game and Code Implementation" style="max-width: 100%;">
                     <p class="figure-caption">
-                        (Left) The shell game with three cups representing 
-                        $S_3$ permutations—each swap changes which object is under which cup. 
-                        (Right) The equivalent $S_n$ problem as Python code: variable assignments 
+                        <strong>Figure 5:</strong> <strong>(Left)</strong> The shell game with three cups representing 
+                        $S_3$ permutations: each swap changes which object is under which cup. 
+                        <strong>(Right)</strong> The equivalent $S_n$ problem as Python code: variable assignments 
                         and swaps mirror the cup movements, where tracking the final values requires 
                         faithful state-tracking through each operation.
                     </p>
                 </div>
 
-                <h3>Evaluation Setup: GPT-5 vs CWM</h3>
+                <h3>3.2 Evaluation Setup: GPT-5 vs CWM</h3>
                 <p>
                     We evaluated both GPT-5 and CWM on $S_5$ permutation sequences with varying lengths: 
-                    $N \in \{8, 16, 32, 64, 128\}$ swap operations. The task: predict the final values 
+                    $N \in \{8, 16, 32, 64, 128\}$ swap operations (Figure 1, left). The task: predict the final values 
                     of all five variables.
                 </p>
 
@@ -293,7 +644,7 @@ def main(): # &lt;&lt; START_OF_TRACE
                     </details>
                 </div>
 
-                <h3>CWM Hallucinates Commands</h3>
+                <h3>3.3 CWM Hallucinates Commands</h3>
                 
                 <p>
                     As sequence length increases, CWM's accuracy drops. But <em>why</em>? Inspecting 
@@ -302,15 +653,15 @@ def main(): # &lt;&lt; START_OF_TRACE
 
                 <p>
                     Rather than making small mistakes in state updates, CWM often generates an 
-                    <em>incorrect next command</em>—predicting a swap that wasn't in the original 
+                    <em>incorrect next command</em>, predicting a swap that wasn't in the original 
                     sequence. Once this happens, all subsequent states become wrong because they're 
-                    computed from a corrupted history.
+                    computed from a corrupted history (Figure 6).
                 </p>
 
                 <div class="figure-container">
                     <div class="comparison-side-by-side">
                         <div class="comparison-panel-left">
-                            <h4>(a) CWM Baseline</h4>
+                            <h4>CWM Baseline</h4>
                             <div class="code-line" style="margin-bottom: 0.5rem;"><strong>Prompt:</strong></div>
                             <div class="code-line">a, b, c = 6, 6, 8</div>
                             <div class="code-line">a, b, c = b, c, a</div>
@@ -323,7 +674,7 @@ def main(): # &lt;&lt; START_OF_TRACE
                             <div class="code-line"><span class="comment">&lt;|frame_sep|&gt;</span> {"a": 6, "b": 6, "c": 8} ❌</div>
                         </div>
                         <div class="comparison-panel-right">
-                            <h4>(b) CWM + Teacher Forcing</h4>
+                            <h4>CWM + Teacher Forcing</h4>
                             <div class="code-line" style="margin-bottom: 0.5rem;"><strong>Prompt:</strong></div>
                             <div class="code-line">a, b, c = 6, 6, 8</div>
                             <div class="code-line">a, b, c = b, c, a</div>
@@ -337,12 +688,14 @@ def main(): # &lt;&lt; START_OF_TRACE
                         </div>
                     </div>
                     <p class="figure-caption">
-                        Baseline hallucinates command 2 (<code>c, a, b</code> instead of <code>b, a, c</code>), 
-                        producing wrong state. Teacher forcing injects ground-truth commands at each step.
+                        <strong>Figure 6:</strong> Action hallucination in CWM. <strong>(Left)</strong> Baseline: the model hallucinates 
+                        command 2 (<code>c, a, b</code> instead of <code>b, a, c</code>), producing incorrect state. 
+                        <strong>(Right)</strong> Teacher forcing: injecting ground-truth commands at each step yields correct state, 
+                        demonstrating the model can track state when given correct actions.
                     </p>
                 </div>
 
-                <h3>Teacher Forcing allows CWM to track state on long horizon</h3>
+                <h3>3.4 Teacher Forcing: CWM Can Track State</h3>
                 <p>
                     To decouple command generation from state tracking, we use <strong>teacher forcing</strong>: 
                     we feed the model the correct commands at each step, and only ask it to predict the 
@@ -370,23 +723,18 @@ def main(): # &lt;&lt; START_OF_TRACE
                 </div>
             </section>
 
-            <!-- Section 3: Why CWM Works -->
-            <section id="why-cwm-works">
-                <h2>3. Why CWM Works: Dense Supervision</h2>
+            <!-- Subsection 3.5: Dense Supervision -->
+                <h3>3.5 Dense Supervision: Mechanism and Trade-offs</h3>
                 
                 <p>
-                    So why does CWM succeed at state-tracking where other models struggle? The answer 
-                    lies in its training format: <strong>dense state supervision</strong>.
-                </p>
-
-                <p>
-                    CWM tracks the state of <em>all variables after each command</em>. In our 
-                    terminology, this is <strong>reveal spacing = 1</strong>: every single operation 
-                    is followed by a complete state snapshot. This creates extremely dense supervision 
-                    signal—both at training time and inference time.
+                    The teacher forcing results confirm it: CWM's state-tracking ability comes from 
+                    dense supervision, not architectural innovation. With reveal spacing = 1, the model 
+                    <em>never has to track state for more than one step</em>. The explicit state 
+                    reveals act as "checkpoints" that reset any accumulated error.
                 </p>
 
                 <div class="comparison-table">
+                    <p style="text-align: center; font-weight: bold; margin-bottom: 0.5rem;">Table 2: Supervision density comparison</p>
                     <table>
                         <thead>
                             <tr>
@@ -419,19 +767,13 @@ def main(): # &lt;&lt; START_OF_TRACE
                     </table>
                 </div>
 
-                <p>
-                    This explains the mechanism: CWM doesn't need sophisticated architectural innovations 
-                    for state-tracking because it <em>never has to track state for more than one step</em>. 
-                    The explicit state reveals act as "checkpoints" that reset any accumulated error.
-                </p>
-
-                <h3>The Trade-off</h3>
+                <h3>3.6 The Trade-off</h3>
                 <p>
                     Dense supervision works, but it comes at a cost:
                 </p>
                 <ul>
-                    <li><strong>Training:</strong> Requires execution traces with full state dumps—expensive to collect</li>
-                    <li><strong>Inference:</strong> Generates many tokens for state representations—slower and more expensive</li>
+                    <li><strong>Training:</strong> Requires execution traces with full state dumps, which are expensive to collect</li>
+                    <li><strong>Inference:</strong> Generates many tokens for state representations, making it slower and more expensive</li>
                     <li><strong>Brittleness:</strong> When state reveals become sparse (e.g., nested function calls), the model struggles</li>
                 </ul>
 
@@ -439,11 +781,8 @@ def main(): # &lt;&lt; START_OF_TRACE
                     <strong>The deeper question:</strong> Can we achieve reliable state-tracking 
                     with <em>sparser</em> supervision? This is where architecture starts to matter...
                 </div>
-            </section>
 
-            <!-- Section 4: Architecture Matters for Sparse Supervision -->
-            <section id="architecture-matters">
-                <h2>4. When Architecture Matters: Sparse Supervision</h2>
+                <h3>3.7 Architecture Matters for Sparse Supervision</h3>
                 
                 <p>
                     CWM's success with dense supervision (reveal spacing = 1) raises a natural question: 
@@ -453,10 +792,11 @@ def main(): # &lt;&lt; START_OF_TRACE
 
                 <p>
                     We trained models from scratch on $S_5$ permutation traces with varying reveal 
-                    spacings, comparing Transformers against linear RNNs with different eigenvalue ranges:
+                    spacings, comparing Transformers against linear RNNs with different eigenvalue ranges (Table 3):
                 </p>
 
                 <div class="comparison-table">
+                    <p style="text-align: center; font-weight: bold; margin-bottom: 0.5rem;">Table 3: Architecture performance under sparse supervision</p>
                     <table>
                         <thead>
                             <tr>
@@ -504,277 +844,75 @@ def main(): # &lt;&lt; START_OF_TRACE
                 </div>
             </section>
 
-            <!-- Section 5: Real Code Challenges -->
-            <section id="real-code-challenges">
-                <h2>5. Challenges in Real Code Execution</h2>
+            <!-- Section 4: Interventions -->
+            <section id="interventions">
+                <h2>4. Interventions</h2>
                 
                 <p>
-                    Moving from synthetic REPL traces to real code reveals two fundamental obstacles 
-                    that challenge state-tracking models. These issues arise from the gap between 
-                    idealized permutation sequences and the complexity of actual program execution.
+                    Given the identified challenges, we tested targeted code transformations to 
+                    expose hidden intermediate states. These interventions aim to restore the 
+                    dense supervision that CWM relies on.
                 </p>
 
-                <div class="transformation-figure">
-                    <!-- Composition Panel -->
-                    <div class="transformation-panel">
-                        <div class="transformation-panel-header composition">
-                            🔗 Composition
-                        </div>
-                        <div class="transformation-content">
-                            <div class="transform-block original-block">
-                                <div class="transform-label original">Original Code</div>
-                                <div class="transform-code">
-<span class="variable">nums</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">2</span>, <span class="number">1</span>]
-<span class="variable">n</span> = <span class="number">2</span>
-<span class="variable">output</span> = []
-<span class="variable">output</span>.<span class="function">append</span>((<span class="variable">nums</span>.<span class="function">count</span>(<span class="variable">n</span>), <span class="variable">n</span>))
-                                </div>
-                            </div>
-                            
-                            <div class="transform-arrow">
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
-                            </div>
-                            
-                            <div class="transform-block transformed-block">
-                                <div class="transform-label transformed">Decomposed</div>
-                                <div class="transform-code">
-<span class="temp-var">_t0</span> = <span class="variable">nums</span>.<span class="function">count</span>(<span class="variable">n</span>)  <span class="comment"># hidden!</span>
-<span class="temp-var">_t1</span> = (<span class="temp-var">_t0</span>, <span class="variable">n</span>)           <span class="comment"># hidden!</span>
-<span class="variable">output</span>.<span class="function">append</span>(<span class="temp-var">_t1</span>)
-                                </div>
-                            </div>
-                            
-                            <div class="transform-insight">
-                                <strong>Issue:</strong> Nested calls hide intermediate values 
-                                (<code>_t0</code>, <code>_t1</code>) — effective reveal spacing &gt; 1
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- String Manipulation Panel -->
-                    <div class="transformation-panel">
-                        <div class="transformation-panel-header string-manip">
-                            📝 String Manipulation
-                        </div>
-                        <div class="transformation-content">
-                            <div class="transform-block original-block">
-                                <div class="transform-label original">Original Code</div>
-                                <div class="transform-code">
-<span class="variable">text</span> = <span class="string">"abracadabra"</span>
-<span class="variable">char</span> = <span class="string">"c"</span>
-<span class="variable">pos</span> = <span class="variable">text</span>.<span class="function">index</span>(<span class="variable">char</span>)
-                                </div>
-                            </div>
-                            
-                            <div class="transform-arrow">
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
-                            </div>
-                            
-                            <div class="transform-block transformed-block">
-                                <div class="transform-label transformed">Explicit Loop</div>
-                                <div class="transform-code">
-<span class="temp-var">_t0</span> = <span class="function">list</span>(<span class="variable">text</span>)
-<span class="temp-var">_t1</span> = <span class="number">-1</span>
-<span class="keyword">for</span> <span class="temp-var">_t2</span> <span class="keyword">in</span> <span class="function">range</span>(<span class="function">len</span>(<span class="temp-var">_t0</span>)):
-    <span class="keyword">if</span> <span class="temp-var">_t0</span>[<span class="temp-var">_t2</span>] == <span class="variable">char</span>:
-        <span class="temp-var">_t1</span> = <span class="temp-var">_t2</span>
-        <span class="keyword">break</span>
-<span class="variable">pos</span> = <span class="temp-var">_t1</span>
-                                </div>
-                            </div>
-                            
-                            <div class="transform-insight">
-                                <strong>Issue:</strong> String→list conversion changes tokenization; 
-                                loop iterations create many hidden states
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <p class="figure-caption" style="text-align: center; margin-top: -0.5rem;">
-                    Two challenges in real code: <strong>Composition</strong> hides intermediate results 
-                    in nested expressions; <strong>String manipulation</strong> requires tokenization 
-                    changes and implicit iteration.
-                </p>
-
-                <h3>Challenge 1: Composition and Hidden Intermediate States</h3>
+                <h3>4.1 Expression Decomposition (CruxEval)</h3>
                 <p>
-                    When commands are <em>composed</em>—nested within other commands or combined into 
-                    compound expressions—the reveal spacing effectively becomes greater than one. 
-                    The intermediate states between sub-operations are never exposed to the model.
+                    We decomposed nested expressions into sequential assignments with explicit 
+                    temporary variables, exposing intermediate values. For example, 
+                    <code>output.append((nums.count(n), n))</code> becomes three separate lines 
+                    with <code>_t0 = nums.count(n)</code>, <code>_t1 = (_t0, n)</code>, etc.
                 </p>
-
                 <p>
-                    Consider a function call like <code>f(g(x))</code>: the result of <code>g(x)</code> 
-                    is an intermediate value that exists only transiently. If the model relies on 
-                    explicit state reveals at each step, these hidden intermediates create blind spots 
-                    in the execution trace. The model must infer multiple state transitions from a 
-                    single observed change—exactly the regime where we've shown performance degrades.
+                    <strong>Result:</strong> Of 119 failed samples, <strong>37 were recovered</strong> 
+                    (31% recovery rate), improving accuracy from 85.1% to 89.8% (+4.7pp).
                 </p>
 
-                <h3>Challenge 2: Tokenization Discontinuity</h3>
+                <h3>4.2 String Decomposition (CruxEval)</h3>
                 <p>
-                    String manipulation creates a unique challenge: <strong>minor semantic changes can 
-                    cause dramatic shifts in tokenization</strong>. A single character edit might 
-                    transform a string from one token into five or more tokens, or vice versa.
+                    For single-character string operations (e.g., <code>text.index(char)</code>), 
+                    we converted to explicit character-level loops. This makes each character 
+                    position visible during trace generation, bypassing BPE tokenization issues.
                 </p>
-
-                <div class="tokenization-figure">
-                    <div class="tokenization-figure-title">Tokenization Discontinuity in String State-Tracking</div>
-                    
-                    <!-- Initial State -->
-                    <div class="tokenization-row">
-                        <div class="tokenization-label">Initial State:</div>
-                        <div class="tokenization-content">
-                            <div class="state-box">s = "abcdefghijklmnopqrstuvwxyz"</div>
-                        </div>
-                    </div>
-                    
-                    <div class="tokenization-row">
-                        <div class="tokenization-label">Tokenization:</div>
-                        <div class="tokenization-content">
-                            <span class="token blue">[alphabet_26]</span>
-                            <span class="token-count blue">1 token</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Edit 1 -->
-                    <div class="edit-marker">
-                        <span class="edit-badge">1</span>
-                        <span class="edit-text">Replace <code>'x'</code> → <code>'X'</code></span>
-                    </div>
-                    
-                    <div class="tokenization-row">
-                        <div class="tokenization-label">New State:</div>
-                        <div class="tokenization-content">
-                            <div class="state-box">s = "abcdefghijklmnopqrstuvw<span class="highlight-char">X</span>yz"</div>
-                        </div>
-                    </div>
-                    
-                    <div class="tokenization-row">
-                        <div class="tokenization-label">Tokenization:</div>
-                        <div class="tokenization-content">
-                            <span class="token orange">[abcdefghijklmnop]</span>
-                            <span class="token orange">[qrst]</span>
-                            <span class="token orange">[uvw]</span>
-                            <span class="token orange">[X]</span>
-                            <span class="token orange">[yz]</span>
-                            <span class="token-count orange">5 tokens</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Edit 2 -->
-                    <div class="edit-marker">
-                        <span class="edit-badge">2</span>
-                        <span class="edit-text">Insert space at position 13</span>
-                    </div>
-                    
-                    <div class="tokenization-row">
-                        <div class="tokenization-label">New State:</div>
-                        <div class="tokenization-content">
-                            <div class="state-box">s = "abcdefghijklm<span class="highlight-char"> </span>nopqrstuvw<span class="highlight-char">X</span>yz"</div>
-                        </div>
-                    </div>
-                    
-                    <div class="tokenization-row">
-                        <div class="tokenization-label">Tokenization:</div>
-                        <div class="tokenization-content">
-                            <span class="token green">[abcdefghijkl]</span>
-                            <span class="token green">[m]</span>
-                            <span class="token green">[ nop]</span>
-                            <span class="token green">[qrst]</span>
-                            <span class="token green">[uvw]</span>
-                            <span class="token green">[X]</span>
-                            <span class="token green">[yz]</span>
-                            <span class="token-count green">7 tokens</span>
-                        </div>
-                    </div>
-                </div>
-
-                <p class="figure-caption" style="text-align: center; margin-top: -0.5rem;">
-                    Minor edits (changing one character, inserting a space) cause radical changes 
-                    in token segmentation, from a single token to 5–7 tokens with entirely different boundaries.
-                </p>
-
                 <p>
-                    This discontinuity means the model cannot rely on local token-level patterns to 
-                    track string state. The representation of nearly identical strings can be 
-                    radically different, forcing models to reconcile vastly different token sequences 
-                    that correspond to minimal semantic changes. This breaks the smooth state 
-                    transitions that enable reliable tracking.
+                    <strong>Result:</strong> An additional <strong>5 unique samples recovered</strong>, 
+                    bringing total accuracy to 90.4% (+5.3pp from baseline). However, loop-based 
+                    decomposition risks token explosion, as 5 samples hit the 32K token limit.
                 </p>
 
-                <div class="takeaway-box">
-                    <strong>Key Insight:</strong> Both challenges share a common thread: they create 
-                    situations where the model cannot observe intermediate states. Composition hides 
-                    sub-operation results; tokenization discontinuity hides the relationship between 
-                    similar strings. Addressing these requires either richer state supervision or 
-                    architectures that can bridge observation gaps.
-                </div>
             </section>
 
-            <!-- Section 6: Towards Better CWMs -->
-            <section id="implications">
-                <h2>6. Implications for Code World Models</h2>
+            <!-- Section 5: Discussion & Conclusion -->
+            <section id="conclusion">
+                <h2>5. Discussion & Conclusion</h2>
                 
-                <h3>What Current CWMs Do</h3>
                 <p>
-                    Transformer-based CWMs like the one in recent work handle state-tracking by:
+                    Transformer-based CWMs achieve strong baseline performance (85% on CruxEval, 
+                    91% on HumanEval) by using dense state supervision (full state reveals at every step). This sidesteps the 
+                    need for sophisticated state-tracking mechanisms: the model never needs to 
+                    track state across more than one operation. However, this approach has clear 
+                    limitations: nested expressions hide intermediates, causing super-linear accuracy 
+                    degradation; string operations break token boundaries unpredictably; and long 
+                    loops cause trace truncation for O(n²) algorithms or large inputs.
                 </p>
-                <ul>
-                    <li>Using full state reveals at every step (reveal spacing = 1)</li>
-                    <li>Burning many tokens on explicit state representations</li>
-                </ul>
-                
-                <p>This works but is <strong>expensive</strong> and <strong>brittle</strong> when:</p>
-                <ul>
-                    <li>State reveals become sparse (nested function calls)</li>
-                    <li>Code has non-deterministic behavior</li>
-                    <li>String operations cause tokenization instability</li>
-                </ul>
 
-                <h3>The Path Forward</h3>
+                <p>
+                    The key insight is that <strong>expressivity is not learnability</strong>. 
+                    When supervision becomes sparse—through composition, long loops, or tokenization 
+                    artifacts—performance degrades predictably. Future code world models will need 
+                    architectures designed for state-tracking under realistic code complexity.
+                </p>
+
                 <div class="recommendations">
+                    <h3>The Path Forward</h3>
                     <ol>
                         <li>
                             <strong>Hybrid architectures:</strong> Combine transformer's 
                             associative recall with linear RNN's state-tracking
                         </li>
                         <li>
-                            <strong>State-aware training data:</strong> Include execution traces 
-                            with intermediate states (LeetCode traces, REPL sessions)
-                        </li>
-                        <li>
-                            <strong>Non-linear RNNs:</strong> For probabilistic code execution, 
-                            architectures need renormalization mechanisms
-                        </li>
-                        <li>
                             <strong>Tokenization stability:</strong> Design tokenizers that 
-                            maintain consistent boundaries across minor edits
+                            maintain consistent boundaries across minor string edits
                         </li>
                     </ol>
-                </div>
-            </section>
-
-            <!-- Section 7: Conclusion -->
-            <section id="conclusion">
-                <h2>7. Conclusion</h2>
-                
-                <div class="summary-box">
-                    <p>
-                        <strong>The core message:</strong> Expressivity is not learnability. 
-                        Architectures designed for state-tracking require state-tracking data 
-                        to realize their theoretical potential.
-                    </p>
-                    <p>
-                        For Code World Models, this means:
-                    </p>
-                    <ul>
-                        <li>Current transformer CWMs succeed by burning tokens on dense state reveals</li>
-                        <li>Linear RNNs with extended eigenvalues can learn compact state representations</li>
-                        <li>Real code introduces probabilistic transitions that break linear dynamics</li>
-                        <li>The future likely requires hybrid architectures with appropriate training data</li>
-                    </ul>
                 </div>
             </section>
 
@@ -794,6 +932,60 @@ def main(): # &lt;&lt; START_OF_TRACE
                         <em>CWM: An Open-Weights LLM for Research on Code Generation with World Models.</em> 2025. 
                         arXiv:<a href="https://arxiv.org/abs/2510.02387">2510.02387</a> [cs.SE].
                     </li>
+                    <li id="ref-plm">
+                        Minsoo Kim, Yeonjoon Jung, Dohyeon Lee, Seung-won Hwang. 
+                        <em>PLM-based World Models for Text-based Games.</em> 
+                        EMNLP 2022, pp. 1324–1341.
+                    </li>
+                    <li id="ref-ggp">
+                        Wolfgang Lehrach, Daniel Hennes, Miguel Lazaro-Gredilla, Xinghua Lou, Carter Wendelken, 
+                        Zun Li, Antoine Dedieu, Jordi Grau-Moya, Marc Lanctot, Atil Iscen, et al. 
+                        <em>Code World Models for General Game Playing.</em> 2025. 
+                        arXiv:<a href="https://arxiv.org/abs/2510.04542">2510.04542</a>.
+                    </li>
+                    <li id="ref-mcts">
+                        Nicola Dainese, Matteo Merler, Minttu Alakuijala, Pekka Marttinen. 
+                        <em>Generating Code World Models with Large Language Models Guided by Monte Carlo Tree Search.</em> 
+                        NeurIPS 2024, vol. 37, pp. 60429–60474.
+                    </li>
+                    <li id="ref-worldcoder">
+                        Hao Tang, Darren Key, Kevin Ellis. 
+                        <em>WorldCoder: A Model-Based LLM Agent for Building World Models by Writing Code and Interacting with the Environment.</em> 
+                        NeurIPS 2024, vol. 37, pp. 70148–70212.
+                    </li>
+                    <li id="ref-merrill">
+                        William Merrill, Ashish Sabharwal. 
+                        <em>The Parallelism Tradeoff: Limitations of Log-Precision Transformers.</em> 
+                        NeurIPS 2023. arXiv:<a href="https://arxiv.org/abs/2207.00729">2207.00729</a>.
+                    </li>
+                    <li id="ref-liu">
+                        Bingbin Liu, Jordan T. Ash, Surbhi Goel, Akshay Krishnamurthy, Cyril Zhang. 
+                        <em>Transformers Learn Shortcuts to Automata.</em> 
+                        ICLR 2023. arXiv:<a href="https://arxiv.org/abs/2210.10749">2210.10749</a>.
+                    </li>
+                    <li id="ref-orvieto">
+                        Antonio Orvieto, Samuel L. Smith, Albert Gu, Anushan Fernando, Caglar Gulcehre, 
+                        Razvan Pascanu, Soham De. 
+                        <em>Resurrecting Recurrent Neural Networks for Long Sequences.</em> 
+                        ICML 2023. arXiv:<a href="https://arxiv.org/abs/2303.06349">2303.06349</a>.
+                    </li>
+                    <li id="ref-nesting">
+                        Lifan Yuan, Weize Chen, Yuchen Zhang, Ganqu Cui, Hanbin Wang, Ziming You, 
+                        Ning Ding, Zhiyuan Liu, Maosong Sun, Hao Peng. 
+                        <em>From f(x) and g(x) to f(g(x)): LLMs Learn New Skills in RL by Composing Old Ones.</em> 
+                        2025. arXiv:<a href="https://arxiv.org/abs/2509.25123">2509.25123</a>.
+                    </li>
+                    <li id="ref-cruxeval">
+                        Alex Gu, Baptiste Rozière, Hugh Leather, Armando Solar-Lezama, Gabriel Synnaeve, Sida I. Wang. 
+                        <em>CruxEval: A Benchmark for Code Reasoning, Understanding and Execution.</em> 
+                        2024. arXiv:<a href="https://arxiv.org/abs/2401.03065">2401.03065</a>.
+                    </li>
+                    <li id="ref-humaneval">
+                        Mark Chen, Jerry Tworek, Heewoo Jun, Qiming Yuan, Henrique Ponde de Oliveira Pinto, 
+                        Jared Kaplan, Harri Edwards, Yuri Burda, Nicholas Joseph, Greg Brockman, et al. 
+                        <em>Evaluating Large Language Models Trained on Code.</em> 
+                        2021. arXiv:<a href="https://arxiv.org/abs/2107.03374">2107.03374</a>.
+                    </li>
                 </ol>
             </section>
 
@@ -803,7 +995,6 @@ def main(): # &lt;&lt; START_OF_TRACE
                 <ul>
                     <li><a href="#">Paper (coming soon)</a></li>
                     <li><a href="#">Code & Data</a></li>
-                    <li><a href="#">Interactive Demo</a></li>
                 </ul>
             </section>
 
