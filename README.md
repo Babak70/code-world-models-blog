@@ -4,7 +4,9 @@ A blog post analyzing state-tracking capabilities in Code World Models (CWMs).
 
 ## View the Blog
 
-Open `posts/state-tracking-code-world-models.html` in a browser, or serve locally:
+**Live:** [https://babak70.github.io/code-world-models-blog/posts/state-tracking-code-world-models.html](https://babak70.github.io/code-world-models-blog/posts/state-tracking-code-world-models.html)
+
+Or serve locally:
 
 ```bash
 python3 -m http.server 8080
