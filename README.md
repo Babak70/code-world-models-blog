@@ -21,6 +21,6 @@ Then visit: http://localhost:8080/posts/state-tracking-code-world-models.html
 - `assets/images/` - Figures and plots
 - `assets/reports/` - Detailed failure analysis reports (CruxEval, HumanEval, Nesting)
 
-## Authors
+## Author
 
-Babak Rahmani · Julien Siems · Riccardo Grazzi
+[Babak Rahmani](https://scholar.google.com/citations?user=Q3DLZlEAAAAJ&hl=en)
