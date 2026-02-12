@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About - State-Tracking Research</title>
+    <title>About - Debugging Code World Models</title>
     <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
@@ -23,22 +23,22 @@
             
             <h2>The Paper</h2>
             <p>
-                This blog accompanies our paper <strong>"Understanding State-Tracking in Linear RNNs 
-                for Code Execution"</strong>, which investigates why theoretically capable architectures 
-                fail to learn state-tracking from standard training data.
+                This blog accompanies our paper <strong>"Debugging code world models"</strong> (arXiv:2602.07672),
+                which studies Code World Models (CWMs) through two complementary perspectives:
+                <strong>local semantic execution</strong> and <strong>long-horizon state tracking</strong>.
             </p>
             
             <h2>Key Contributions</h2>
             <ul>
-                <li>We translate permutation group tasks into Python REPL traces for next-token prediction</li>
-                <li>We identify that dense intermediate state supervision is critical for learnability</li>
-                <li>We show DeltaNet[-1,1] learns and extrapolates state-tracking where transformers fail</li>
-                <li>We analyze challenges in real code: probabilistic transitions and tokenization discontinuity</li>
+                <li>We characterize two dominant failure regimes: token-budget exhaustion and string-valued state brittleness</li>
+                <li>We show long-horizon degradation is dominated by incorrect action generation (action hallucination)</li>
+                <li>We show teacher forcing isolates state propagation and yields strong long-horizon accuracy</li>
+                <li>We connect string failures to subword tokenization instability rather than program structure</li>
             </ul>
             
             <h2>Resources</h2>
             <ul>
-                <li><a href="#">Paper (ICLR 2026)</a></li>
+                <li><a href="https://arxiv.org/abs/2602.07672" target="_blank" rel="noopener noreferrer">Paper (arXiv:2602.07672)</a></li>
                 <li><a href="#">Code Repository</a></li>
                 <li><a href="#">Dataset</a></li>
             </ul>

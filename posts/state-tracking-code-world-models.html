@@ -31,7 +31,7 @@
                 <h1>Debugging Code World Models</h1>
                 <p class="post-authors"><a href="https://scholar.google.com/citations?user=Q3DLZlEAAAAJ&hl=en" target="_blank">Babak Rahmani</a></p>
                 <p class="post-meta">
-                    <span class="post-date">January 2026</span>
+                    <span class="post-date">February 2026</span>
                     <span class="reading-time">~15 min read</span>
                 </p>
             </div>
@@ -47,7 +47,7 @@
                     <span class="tab-arrow">↗</span>
                 </a>
                 <a href="../assets/reports/nesting_report.html" class="report-tab" target="_blank">
-                    <span class="tab-label">Nesting Report</span>
+                    <span class="tab-label">Composition Report</span>
                     <span class="tab-arrow">↗</span>
                 </a>
             </div>
@@ -55,7 +55,7 @@
             <div class="post-tags">
                 <span class="tag">Code World Models</span>
                 <span class="tag">State-Tracking</span>
-                <span class="tag">Linear RNNs</span>
+                <span class="tag">Semantic Execution</span>
                 <span class="tag">Transformers</span>
             </div>
 
@@ -69,10 +69,8 @@
                     CWM baseline generates both commands and states; CWM+TF (teacher forcing) receives ground-truth commands 
                     and only predicts states. GPT-5 degrades rapidly while CWM+TF maintains high accuracy, showing the model 
                     can track state when given correct actions. 
-                    <strong>(Right)</strong> Composition accuracy on nested string functions (depths 1–5). Observed accuracy 
+                    <strong>(Right)</strong> <em>String</em> composition accuracy on nested string functions (depths 1–5). observed accuracy 
                     falls far below the theoretical baseline (dashed) computed from atomic accuracy. 
-                    Flattening nested calls into sequential assignments (red) provides modest improvement but cannot 
-                    close the gap.
                 </p>
             </div>
 
@@ -157,7 +155,7 @@
                 <p>
                     We evaluated CWM on two standard code execution benchmarks: <strong>CruxEval-O</strong> <a href="#ref-cruxeval">[11]</a>
                     (output prediction) and <strong>HumanEval</strong> <a href="#ref-humaneval">[12]</a> (function execution), as well as 
-                    the <strong>Nesting</strong> dataset <a href="#ref-nesting">[10]</a> that probes compositional execution 
+                    the <strong>composition (Nesting)</strong> dataset <a href="#ref-nesting">[10]</a> that probes compositional execution 
                     of nested string manipulation functions (e.g., <code>upper(replace(strip(x)))</code>). 
                     Table 1 summarizes the results.
                 </p>
@@ -177,35 +175,35 @@
                             <tr>
                                 <td>CruxEval-O</td>
                                 <td>800</td>
-                                <td>85.1%</td>
+                                <td>85.0%</td>
                                 <td><strong>90.4%</strong></td>
                             </tr>
                             <tr>
                                 <td>HumanEval</td>
                                 <td>723</td>
                                 <td>91.4%</td>
-                                <td><strong>—</strong></td>
+                                <td><strong>92%</strong></td>
                             </tr>
                             <tr style="border-top: 2px solid #ddd;">
-                                <td>Nesting (depth=2)</td>
+                                <td>Composition (string, depth=2)</td>
                                 <td>100</td>
                                 <td>75%</td>
                                 <td><strong>78%</strong></td>
                             </tr>
                             <tr>
-                                <td>Nesting (depth=3)</td>
+                                <td>Composition (string, depth=3)</td>
                                 <td>100</td>
                                 <td>58%</td>
                                 <td><strong>63%</strong></td>
                             </tr>
                             <tr>
-                                <td>Nesting (depth=4)</td>
+                                <td>Composition (string, depth=4)</td>
                                 <td>100</td>
                                 <td>39%</td>
                                 <td><strong>43%</strong></td>
                             </tr>
                             <tr>
-                                <td>Nesting (depth=5)</td>
+                                <td>Composition (string, depth=5)</td>
                                 <td>100</td>
                                 <td>25%</td>
                                 <td><strong>28%</strong></td>
@@ -215,118 +213,43 @@
                 </div>
 
                 <p>
+                    <strong>About “After Intervention”:</strong> In the paper, these numbers come from a small set of
+                    semantics-preserving program rewrites applied to failure cases (e.g., expanding nested expressions into
+                    explicit temporaries) to test whether errors are driven by <em>hidden intermediate values</em> rather than
+                    incorrect execution. This provides a diagnostic sanity check and yields modest gains, but it does not change
+                    the core failure analysis below.
+                </p>
+
+                <p>
                     These baselines are strong but reveal systematic failure patterns. Error analysis 
                     (detailed in the <a href="../assets/reports/cruxeval_failure_report.html" target="_blank">CruxEval</a>, 
                     <a href="../assets/reports/humaneval_failure_report.html" target="_blank">HumanEval</a>, and 
-                    <a href="../assets/reports/nesting_report.html" target="_blank">Nesting</a> reports) identifies three primary failure modes: 
-                    <strong>compositionality</strong> (nested expressions hiding intermediate values), 
+                    <a href="../assets/reports/nesting_report.html" target="_blank">Composition</a> reports) identifies three primary failure modes: 
+                    <strong>string-valued state brittleness</strong> (especially under composition), 
                     <strong>tokenization discontinuity</strong> (string operations breaking token boundaries), 
                     and <strong>trace truncation</strong> (loops generating traces that exceed the 32K token limit). 
                     We examine each below.
                 </p>
 
-                <p>
-                    <strong>Figure 2</strong> illustrates the first two challenges and a potential resolution strategy. 
-                    On the left, nested function calls hide intermediate values that CWM never sees during trace generation. 
-                    On the right, string operations require character-level iteration that changes tokenization entirely. 
-                    In both cases, <em>decomposing</em> the expression into explicit steps can expose these hidden states, 
-                    restoring the dense supervision CWM relies on. We explore these interventions in <a href="#interventions">Section 4</a>.
-                </p>
-
-                <div class="transformation-figure">
-                    <!-- Composition Panel -->
-                    <div class="transformation-panel">
-                        <div class="transformation-panel-header composition">
-                            🔗 Composition
-                        </div>
-                        <div class="transformation-content">
-                            <div class="transform-block original-block">
-                                <div class="transform-label original">Original Code</div>
-                                <div class="transform-code">
-<span class="variable">nums</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">2</span>, <span class="number">1</span>]
-<span class="variable">n</span> = <span class="number">2</span>
-<span class="variable">output</span> = []
-<span class="variable">output</span>.<span class="function">append</span>((<span class="variable">nums</span>.<span class="function">count</span>(<span class="variable">n</span>), <span class="variable">n</span>))
-                                </div>
-                            </div>
-                            
-                            <div class="transform-arrow">
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
-                            </div>
-                            
-                            <div class="transform-block transformed-block">
-                                <div class="transform-label transformed">Decomposed</div>
-                                <div class="transform-code">
-<span class="temp-var">_t0</span> = <span class="variable">nums</span>.<span class="function">count</span>(<span class="variable">n</span>)  <span class="comment"># hidden!</span>
-<span class="temp-var">_t1</span> = (<span class="temp-var">_t0</span>, <span class="variable">n</span>)           <span class="comment"># hidden!</span>
-<span class="variable">output</span>.<span class="function">append</span>(<span class="temp-var">_t1</span>)
-                                </div>
-                            </div>
-                            
-                            <div class="transform-insight">
-                                <strong>Issue:</strong> Nested calls hide intermediate values 
-                                (<code>_t0</code>, <code>_t1</code>) — effective reveal spacing &gt; 1
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- String Manipulation Panel -->
-                    <div class="transformation-panel">
-                        <div class="transformation-panel-header string-manip">
-                            📝 String Manipulation
-                        </div>
-                        <div class="transformation-content">
-                            <div class="transform-block original-block">
-                                <div class="transform-label original">Original Code</div>
-                                <div class="transform-code">
-<span class="variable">text</span> = <span class="string">"abracadabra"</span>
-<span class="variable">char</span> = <span class="string">"c"</span>
-<span class="variable">pos</span> = <span class="variable">text</span>.<span class="function">index</span>(<span class="variable">char</span>)
-                                </div>
-                            </div>
-                            
-                            <div class="transform-arrow">
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
-                            </div>
-                            
-                            <div class="transform-block transformed-block">
-                                <div class="transform-label transformed">Explicit Loop</div>
-                                <div class="transform-code">
-<span class="temp-var">_t0</span> = <span class="function">list</span>(<span class="variable">text</span>)
-<span class="temp-var">_t1</span> = <span class="number">-1</span>
-<span class="keyword">for</span> <span class="temp-var">_t2</span> <span class="keyword">in</span> <span class="function">range</span>(<span class="function">len</span>(<span class="temp-var">_t0</span>)):
-    <span class="keyword">if</span> <span class="temp-var">_t0</span>[<span class="temp-var">_t2</span>] == <span class="variable">char</span>:
-        <span class="temp-var">_t1</span> = <span class="temp-var">_t2</span>
-        <span class="keyword">break</span>
-<span class="variable">pos</span> = <span class="temp-var">_t1</span>
-                                </div>
-                            </div>
-                            
-                            <div class="transform-insight">
-                                <strong>Issue:</strong> String→list conversion changes tokenization; 
-                                loop iterations create many hidden states
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <p class="figure-caption" style="text-align: center; margin-top: -0.5rem;">
-                    <strong>Figure 2:</strong> Two challenges in real code and potential decomposition strategies. 
-                    <strong>Left:</strong> Composition hides intermediate results in nested expressions. 
-                    <strong>Right:</strong> String manipulation requires tokenization changes and implicit iteration.
-                </p>
-
-                <h3>2.1 Challenge: Compositionality</h3>
+                <h3>2.1 Challenge: String Composition</h3>
                 
                 <p>
-                    As shown in Figure 2 (left), when commands are <em>composed</em> (nested within other commands 
-                    or combined into compound expressions), the reveal spacing effectively becomes greater than one. 
-                    The intermediate states between sub-operations are never exposed to the model.
+                    To isolate the source of string-related failures, the paper uses a controlled test based on
+                    <strong>functional composition</strong>: compose deterministic single-argument functions to depth <em>d</em>.
+                    This induces multi-step computation without loops or branching, so program structure is held fixed while
+                    only the <em>data type</em> varies.
+                </p>
+
+                <p>
+                    Under this scaffold, CWMs compose reliably across non-string domains: in a multi-domain “Composition Zoo”,
+                    CWM reaches 100% accuracy at depth 5 across boolean, bitwise, math, character, list, set, and dictionary
+                    categories. In contrast, <strong>string-valued</strong> compositions degrade sharply with depth under identical
+                    structure—implicating representation instability rather than compositional depth.
                 </p>
 
                 <p>
                     <strong>Experimental setup:</strong> Using the library of 25 deterministic 
-                    string-manipulation functions from the Nesting dataset <a href="#ref-nesting">[10]</a>, 
+                    string-manipulation functions from the composition string dataset (“Nesting”) <a href="#ref-nesting">[10]</a>, 
                     we designed prompts for CWM and first evaluated on atomic (depth-1) calls. 
                     We selected the 15 functions achieving ≥90% atomic accuracy (average: 95.3%), 
                     then generated 100 test samples per depth for compositions from depth 1 to 5 
@@ -343,10 +266,11 @@
                 </div>
 
                 <p>
-                    <strong>Results:</strong> At depth 5, observed accuracy (25%) is 
-                    <strong>50 percentage points below</strong> the theoretical baseline (78.6%) 
-                    computed from atomic accuracy (0.953⁵). This gap grows super-linearly with depth 
-                    (Figure 1, right), indicating compositional execution introduces errors beyond simple error propagation.
+                    <strong>Results:</strong> Accuracy degrades sharply with depth—75% at depth 2 down to 25% at depth 5
+                    (Table 1; Figure 1, right)—despite programs being short, deterministic, and purely functional.
+                    In stark contrast, non-string compositions maintain 100% accuracy at depth 5 under the same scaffold.
+                    This supports the paper’s conclusion that the dominant limitation is <strong>string representation</strong>, not
+                    compositional depth.
                 </p>
 
                 <h3>2.2 Challenge: Trace Truncation</h3>
@@ -367,104 +291,35 @@
                 <h3>2.3 Challenge: Tokenization Discontinuity</h3>
                 <p>
                     String manipulation creates a challenge unrelated to supervision density: 
-                    <strong>minor semantic changes can cause dramatic shifts in tokenization</strong>. 
-                    A single character edit might transform a string from one token into five or more, 
-                    as illustrated in Figure 4.
+                    <strong>the same character pattern can map to different token IDs depending on context</strong>. 
+                    Under BPE tokenization, a separator or pattern may be a single token in isolation, yet that token can disappear
+                    entirely when the same characters appear inside a longer string.
                 </p>
 
-                <div class="tokenization-figure">
-                    <div class="tokenization-figure-title">Tokenization Discontinuity in String State-Tracking</div>
-                    
-                    <!-- Initial State -->
-                    <div class="tokenization-row">
-                        <div class="tokenization-label">Initial State:</div>
-                        <div class="tokenization-content">
-                            <div class="state-box">s = "abcdefghijklmnopqrstuvwxyz"</div>
-                        </div>
-                    </div>
-                    
-                    <div class="tokenization-row">
-                        <div class="tokenization-label">Tokenization:</div>
-                        <div class="tokenization-content">
-                            <span class="token blue">[alphabet_26]</span>
-                            <span class="token-count blue">1 token</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Edit 1 -->
-                    <div class="edit-marker">
-                        <span class="edit-badge">1</span>
-                        <span class="edit-text">Replace <code>'x'</code> → <code>'X'</code></span>
-                    </div>
-                    
-                    <div class="tokenization-row">
-                        <div class="tokenization-label">New State:</div>
-                        <div class="tokenization-content">
-                            <div class="state-box">s = "abcdefghijklmnopqrstuvw<span class="highlight-char">X</span>yz"</div>
-                        </div>
-                    </div>
-                    
-                    <div class="tokenization-row">
-                        <div class="tokenization-label">Tokenization:</div>
-                        <div class="tokenization-content">
-                            <span class="token orange">[abcdefghijklmnop]</span>
-                            <span class="token orange">[qrst]</span>
-                            <span class="token orange">[uvw]</span>
-                            <span class="token orange">[X]</span>
-                            <span class="token orange">[yz]</span>
-                            <span class="token-count orange">5 tokens</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Edit 2 -->
-                    <div class="edit-marker">
-                        <span class="edit-badge">2</span>
-                        <span class="edit-text">Insert space at position 13</span>
-                    </div>
-                    
-                    <div class="tokenization-row">
-                        <div class="tokenization-label">New State:</div>
-                        <div class="tokenization-content">
-                            <div class="state-box">s = "abcdefghijklm<span class="highlight-char"> </span>nopqrstuvw<span class="highlight-char">X</span>yz"</div>
-                        </div>
-                    </div>
-                    
-                    <div class="tokenization-row">
-                        <div class="tokenization-label">Tokenization:</div>
-                        <div class="tokenization-content">
-                            <span class="token green">[abcdefghijkl]</span>
-                            <span class="token green">[m]</span>
-                            <span class="token green">[ nop]</span>
-                            <span class="token green">[qrst]</span>
-                            <span class="token green">[uvw]</span>
-                            <span class="token green">[X]</span>
-                            <span class="token green">[yz]</span>
-                            <span class="token-count green">7 tokens</span>
-                        </div>
-                    </div>
+                <div style="text-align: center; margin: 1rem 0;">
+                    <img src="../assets/images/token_discontinuity.png" alt="Tokenization discontinuity under BPE tokenization" style="max-width: 100%; height: auto;">
                 </div>
 
                 <p class="figure-caption" style="text-align: center; margin-top: -0.5rem;">
                     <strong>Figure 4:</strong> Tokenization discontinuity in string state-tracking. 
-                    Minor edits (changing one character, inserting a space) cause radical changes 
-                    in BPE token segmentation—from a single token to 5–7 tokens with entirely different boundaries. 
-                    This makes string operations unpredictable for the model.
+                    Under BPE tokenization, the same character pattern can map to different token IDs depending on context.
+                    This can make simple string operations (e.g., <code>rsplit</code>, <code>rfind</code>) unreliable because the token
+                    for a separator/pattern in isolation may not appear in the longer string’s token sequence.
                 </p>
 
                 <p>
-                    This is problematic for state-tracking: two strings that differ by a single character 
-                    may have completely different token representations. The model cannot rely on 
-                    surface-level similarity to predict the next state, making string operations 
-                    a consistent source of errors.
+                    This is problematic for execution: a model operating over tokens may be unable to “find” a separator/pattern
+                    at the token level even when the characters exist in the underlying string. This creates brittle errors in
+                    deterministic programs and compounds sharply under string composition.
                 </p>
 
                 <div class="takeaway-box">
                     <strong>Key Insight:</strong> These challenges have different roots. 
-                    <strong>Compositionality</strong> and <strong>trace truncation</strong> are both 
-                    consequences of dense supervision: the first creates hidden states, the second 
-                    creates traces too long to process. <strong>Tokenization discontinuity</strong> 
-                    is a separate problem with how BPE tokenizers represent strings, independent of 
-                    supervision strategy.
+                    On real code benchmarks, two dominant regimes emerge: 
+                    <strong>(1) token-budget exhaustion</strong> from long execution traces, and 
+                    <strong>(2) string-valued state brittleness</strong> due to tokenization instability.
+                    Hidden intermediates in nested expressions explain a subset of failures and motivate decomposition
+                    analysis, but composition depth is not a general bottleneck outside string-valued state.
                 </div>
             </section>
 
@@ -774,7 +629,6 @@ def main(): # &lt;&lt; START_OF_TRACE
                 <ul>
                     <li><strong>Training:</strong> Requires execution traces with full state dumps, which are expensive to collect</li>
                     <li><strong>Inference:</strong> Generates many tokens for state representations, making it slower and more expensive</li>
-                    <li><strong>Brittleness:</strong> When state reveals become sparse (e.g., nested function calls), the model struggles</li>
                 </ul>
 
                 <div class="key-question">
@@ -791,129 +645,39 @@ def main(): # &lt;&lt; START_OF_TRACE
                 </p>
 
                 <p>
-                    We trained models from scratch on $S_5$ permutation traces with varying reveal 
-                    spacings, comparing Transformers against linear RNNs with different eigenvalue ranges (Table 3):
-                </p>
-
-                <div class="comparison-table">
-                    <p style="text-align: center; font-weight: bold; margin-bottom: 0.5rem;">Table 3: Architecture performance under sparse supervision</p>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Architecture</th>
-                                <th>Reveal Spacing = 1</th>
-                                <th>Reveal Spacing = 4</th>
-                                <th>Reveal Spacing = 8</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Transformer</td>
-                                <td>✅ Good</td>
-                                <td>⚠️ Degrades</td>
-                                <td>❌ Fails</td>
-                            </tr>
-                            <tr>
-                                <td>DeltaNet [0,1]</td>
-                                <td>✅ Good</td>
-                                <td>⚠️ Degrades</td>
-                                <td>❌ Fails</td>
-                            </tr>
-                            <tr style="background: #d4edda;">
-                                <td><strong>DeltaNet [-1,1]</strong></td>
-                                <td>✅ Good</td>
-                                <td>✅ Good</td>
-                                <td>✅ Good</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <p>
-                    The key finding: <strong>DeltaNet with extended eigenvalues [-1,1]</strong> can 
-                    learn state-tracking even with sparse supervision, and extrapolates to longer 
-                    sequences than seen during training. Transformers and standard DeltaNet [0,1] 
-                    both collapse as reveal spacing increases.
+                    Sparse observation forces models to carry execution state over longer horizons without frequent
+                    “checkpoints”. Prior work suggests this is exactly where architectural inductive bias matters:
+                    recurrent and state-space models are natural candidates for stable state propagation under reduced
+                    observation.
                 </p>
 
                 <div class="takeaway-box">
-                    <strong>Takeaway:</strong> Architecture determines whether state-tracking 
-                    generalizes under sparse supervision. CWM succeeds by avoiding this challenge 
-                    entirely (dense reveals), but more efficient approaches require architectures 
-                    designed for state-tracking.
+                    <strong>Takeaway:</strong> CWMs succeed largely by using dense supervision. Moving beyond dense traces calls
+                    for methods that can propagate state reliably under sparse observation, without exploding token cost.
                 </div>
-            </section>
-
-            <!-- Section 4: Interventions -->
-            <section id="interventions">
-                <h2>4. Interventions</h2>
-                
-                <p>
-                    Given the identified challenges, we tested targeted code transformations to 
-                    expose hidden intermediate states. These interventions aim to restore the 
-                    dense supervision that CWM relies on.
-                </p>
-
-                <h3>4.1 Expression Decomposition (CruxEval)</h3>
-                <p>
-                    We decomposed nested expressions into sequential assignments with explicit 
-                    temporary variables, exposing intermediate values. For example, 
-                    <code>output.append((nums.count(n), n))</code> becomes three separate lines 
-                    with <code>_t0 = nums.count(n)</code>, <code>_t1 = (_t0, n)</code>, etc.
-                </p>
-                <p>
-                    <strong>Result:</strong> Of 119 failed samples, <strong>37 were recovered</strong> 
-                    (31% recovery rate), improving accuracy from 85.1% to 89.8% (+4.7pp).
-                </p>
-
-                <h3>4.2 String Decomposition (CruxEval)</h3>
-                <p>
-                    For single-character string operations (e.g., <code>text.index(char)</code>), 
-                    we converted to explicit character-level loops. This makes each character 
-                    position visible during trace generation, bypassing BPE tokenization issues.
-                </p>
-                <p>
-                    <strong>Result:</strong> An additional <strong>5 unique samples recovered</strong>, 
-                    bringing total accuracy to 90.4% (+5.3pp from baseline). However, loop-based 
-                    decomposition risks token explosion, as 5 samples hit the 32K token limit.
-                </p>
-
             </section>
 
             <!-- Section 5: Discussion & Conclusion -->
             <section id="conclusion">
-                <h2>5. Discussion & Conclusion</h2>
+                <h2>4. Discussion & Conclusion</h2>
                 
                 <p>
                     Transformer-based CWMs achieve strong baseline performance (85% on CruxEval, 
                     91% on HumanEval) by using dense state supervision (full state reveals at every step). This sidesteps the 
                     need for sophisticated state-tracking mechanisms: the model never needs to 
                     track state across more than one operation. However, this approach has clear 
-                    limitations: nested expressions hide intermediates, causing super-linear accuracy 
-                    degradation; string operations break token boundaries unpredictably; and long 
-                    loops cause trace truncation for O(n²) algorithms or large inputs.
+                    limitations: long-running programs can trigger trace truncation; and string-valued state is brittle
+                    under subword tokenization, causing deterministic string operations to fail and compounding sharply
+                    under string composition.
                 </p>
 
                 <p>
                     The key insight is that <strong>expressivity is not learnability</strong>. 
-                    When supervision becomes sparse—through composition, long loops, or tokenization 
-                    artifacts—performance degrades predictably. Future code world models will need 
-                    architectures designed for state-tracking under realistic code complexity.
+                    Dense traces can make local state updates easy to learn, but they also create token-intensive
+                    execution histories and do not resolve representation instability for strings. Future code world models
+                    will need supervision and state representations that are better aligned with program execution and data types.
                 </p>
 
-                <div class="recommendations">
-                    <h3>The Path Forward</h3>
-                    <ol>
-                        <li>
-                            <strong>Hybrid architectures:</strong> Combine transformer's 
-                            associative recall with linear RNN's state-tracking
-                        </li>
-                        <li>
-                            <strong>Tokenization stability:</strong> Design tokenizers that 
-                            maintain consistent boundaries across minor string edits
-                        </li>
-                    </ol>
-                </div>
             </section>
 
             <!-- References -->
@@ -993,8 +757,7 @@ def main(): # &lt;&lt; START_OF_TRACE
             <section id="resources">
                 <h2>Resources</h2>
                 <ul>
-                    <li><a href="#">Paper (coming soon)</a></li>
-                    <li><a href="#">Code & Data</a></li>
+                    <li><a href="https://arxiv.org/abs/2602.07672" target="_blank" rel="noopener noreferrer">Paper (arXiv:2602.07672)</a></li>
                 </ul>
             </section>
 
@@ -1002,11 +765,12 @@ def main(): # &lt;&lt; START_OF_TRACE
             <section id="citation">
                 <h2>Citation</h2>
                 <div class="citation-box">
-<pre>@article{authors2026statetracking,
-  title={Understanding State-Tracking in Linear RNNs for Code Execution},
-  author={...},
-  journal={ICLR},
-  year={2026}
+<pre>@article{rahmani2026debugging,
+    title={Debugging code world models},
+    author={Rahmani, Babak},
+    journal={arXiv preprint arXiv:2602.07672},
+    year={2026},
+    url={https://arxiv.org/abs/2602.07672}
 }</pre>
                 </div>
             </section>

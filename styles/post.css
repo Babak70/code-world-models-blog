@@ -35,7 +35,13 @@
     margin-bottom: 0;
     display: flex;
     justify-content: center;
+    align-items: center;
     gap: 1.5rem;
+}
+
+.post-meta .post-date,
+.post-meta .reading-time {
+    margin: 0;
 }
 
 .post-tags {

@@ -78,8 +78,8 @@
             <h3>📊 Summary Statistics</h3>
             <div class="summary-grid">
                 <div class="stat-card"><div class="stat-number">800</div><div class="stat-label">Total Test Cases</div></div>
-                <div class="stat-card"><div class="stat-number">681</div><div class="stat-label">Correct (85.1%)</div></div>
-                <div class="stat-card error"><div class="stat-number">119</div><div class="stat-label">Total Failures</div></div>
+                <div class="stat-card"><div class="stat-number">680</div><div class="stat-label">Correct (85.0%)</div></div>
+                <div class="stat-card error"><div class="stat-number">120</div><div class="stat-label">Total Failures</div></div>
                 <div class="stat-card warning"><div class="stat-number">6</div><div class="stat-label">Truncated</div></div>
                 <div class="stat-card error"><div class="stat-number">114</div><div class="stat-label">Wrong Answer</div></div>
             </div>
@@ -94,58 +94,58 @@
                 <div class="intervention-summary">
                     <table>
                         <tr><th>Stage</th><th>Correct</th><th>Accuracy</th><th>Δ Recovered</th></tr>
-                        <tr><td>Baseline</td><td>681/800</td><td>85.12%</td><td>—</td></tr>
+                        <tr><td>Baseline</td><td>680/800</td><td>85.0%</td><td>—</td></tr>
                         <tr><td>+ Expr Decomposition</td><td>718/800</td><td>89.75%</td><td>+37</td></tr>
                         <tr><td>+ String Decomposition</td><td>723/800</td><td>90.38%</td><td>+5 (unique)</td></tr>
                     </table>
-                    <p><strong>Total Recovered:</strong> 42/119 failed samples (35.3%)</p>
-                    <p><strong>Still Failing:</strong> 77 samples</p>
+                    <p><strong>Total Recovered:</strong> 42/120 failed samples (35.0%)</p>
+                    <p><strong>Still Failing:</strong> 78 samples</p>
                 </div>
             </div>
         </div>
 
         <div class="chart-section">
-            <h3>🥧 Root Cause Distribution</h3>
+            <h3>🥧 Failure Distribution by Output Data Type</h3>
             <div class="chart-container">
                 <div class="pie-chart-wrapper">
-                    <canvas id="rootCausePieChart"></canvas>
+                    <canvas id="dataTypePieChart"></canvas>
                 </div>
                 <div class="chart-legend">
 
                     <div class="legend-item">
                         <div class="legend-color" style="background: #e74c3c;"></div>
-                        <span class="legend-label">Loop/Counter Error</span>
-                        <span class="legend-count">17</span>
+                        <span class="legend-label">str</span>
+                        <span class="legend-count">72.8%</span>
                     </div>
 
                     <div class="legend-item">
                         <div class="legend-color" style="background: #f39c12;"></div>
-                        <span class="legend-label">Method Semantics Error</span>
-                        <span class="legend-count">51</span>
+                        <span class="legend-label">list</span>
+                        <span class="legend-count">8.8%</span>
                     </div>
 
                     <div class="legend-item">
                         <div class="legend-color" style="background: #3498db;"></div>
-                        <span class="legend-label">Index/Slice Error</span>
-                        <span class="legend-count">25</span>
-                    </div>
-
-                    <div class="legend-item">
-                        <div class="legend-color" style="background: #e67e22;"></div>
-                        <span class="legend-label">Truncated</span>
-                        <span class="legend-count">6</span>
+                        <span class="legend-label">int</span>
+                        <span class="legend-count">11.4%</span>
                     </div>
 
                     <div class="legend-item">
                         <div class="legend-color" style="background: #9b59b6;"></div>
-                        <span class="legend-label">String Operation Error</span>
-                        <span class="legend-count">19</span>
+                        <span class="legend-label">bool</span>
+                        <span class="legend-count">3.5%</span>
                     </div>
 
                     <div class="legend-item">
                         <div class="legend-color" style="background: #1abc9c;"></div>
-                        <span class="legend-label">Other</span>
-                        <span class="legend-count">2</span>
+                        <span class="legend-label">tuple</span>
+                        <span class="legend-count">2.6%</span>
+                    </div>
+
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #e67e22;"></div>
+                        <span class="legend-label">bytes</span>
+                        <span class="legend-count">0.9%</span>
                     </div>
 
                 </div>
@@ -29455,7 +29455,7 @@ assert f(&quot;\&quot;\\%$ normal chars $%~ qwet42&#x27;&quot;) == &#x27;normalc
                 labels: ['Baseline', '+ Expr Decomp', '+ String Decomp'],
                 datasets: [{
                     label: 'Accuracy (%)',
-                    data: [85.12, 89.75, 90.38],
+                    data: [85.0, 89.75, 90.38],
                     backgroundColor: ['#78909c', '#42a5f5', '#66bb6a'],
                     borderWidth: 0,
                     borderRadius: 4
@@ -29481,14 +29481,14 @@ assert f(&quot;\&quot;\\%$ normal chars $%~ qwet42&#x27;&quot;) == &#x27;normalc
             plugins: [ChartDataLabels]
         });
 
-        // Pie Chart - Root Causes
-        new Chart(document.getElementById('rootCausePieChart'), {
+        // Pie Chart - Failure distribution by output data type (wrong-answer failures; excludes truncations)
+        new Chart(document.getElementById('dataTypePieChart'), {
             type: 'pie',
             data: {
-                labels: ["Loop/Counter Error", "Method Semantics Error", "Index/Slice Error", "Truncated", "String Operation Error", "Other"],
+                labels: ["str", "list", "int", "bool", "tuple", "bytes"],
                 datasets: [{
-                    data: [17, 51, 25, 6, 19, 2],
-                    backgroundColor: ["#e74c3c", "#f39c12", "#3498db", "#e67e22", "#9b59b6", "#1abc9c"]
+                    data: [72.8, 8.8, 11.4, 3.5, 2.6, 0.9],
+                    backgroundColor: ["#e74c3c", "#f39c12", "#3498db", "#9b59b6", "#1abc9c", "#e67e22"]
                 }]
             },
             options: {

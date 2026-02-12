@@ -103,47 +103,41 @@
         </div>
 
         <div class="chart-section">
-            <h3>🥧 Root Cause Distribution</h3>
+            <h3>🥧 Failure Distribution by Output Data Type</h3>
             <div class="chart-container">
                 <div class="pie-chart-wrapper">
-                    <canvas id="rootCausePieChart"></canvas>
+                    <canvas id="dataTypePieChart"></canvas>
                 </div>
                 <div class="chart-legend">
 
                     <div class="legend-item">
                         <div class="legend-color" style="background: #9b59b6;"></div>
-                        <span class="legend-label">Truncation</span>
-                        <span class="legend-count">30</span>
+                        <span class="legend-label">str</span>
+                        <span class="legend-count">44.0%</span>
                     </div>
 
                     <div class="legend-item">
                         <div class="legend-color" style="background: #e74c3c;"></div>
-                        <span class="legend-label">Arithmetic/Counting</span>
-                        <span class="legend-count">13</span>
+                        <span class="legend-label">list</span>
+                        <span class="legend-count">25.0%</span>
                     </div>
 
                     <div class="legend-item">
                         <div class="legend-color" style="background: #3498db;"></div>
-                        <span class="legend-label">String Operations</span>
-                        <span class="legend-count">7</span>
+                        <span class="legend-label">int</span>
+                        <span class="legend-count">18.8%</span>
                     </div>
 
                     <div class="legend-item">
                         <div class="legend-color" style="background: #e67e22;"></div>
-                        <span class="legend-label">Data/Extraction Bug</span>
-                        <span class="legend-count">7</span>
+                        <span class="legend-label">bool</span>
+                        <span class="legend-count">6.2%</span>
                     </div>
 
                     <div class="legend-item">
                         <div class="legend-color" style="background: #f39c12;"></div>
-                        <span class="legend-label">Discontinuity (Type Coercion)</span>
-                        <span class="legend-count">6</span>
-                    </div>
-
-                    <div class="legend-item">
-                        <div class="legend-color" style="background: #1abc9c;"></div>
-                        <span class="legend-label">State Tracking</span>
-                        <span class="legend-count">2</span>
+                        <span class="legend-label">float</span>
+                        <span class="legend-count">6.2%</span>
                     </div>
 
                 </div>
@@ -22630,23 +22624,34 @@ def main(): # &lt;&lt; START_OF_TRACE
             }
         });
 
-        // Root Cause Pie Chart
-        new Chart(document.getElementById('rootCausePieChart'), {
+        // Pie Chart - Failure distribution by output data type (wrong-answer failures; excludes truncations)
+        new Chart(document.getElementById('dataTypePieChart'), {
             type: 'pie',
             data: {
-                labels: ["Truncation", "Arithmetic/Counting", "String Operations", "Data/Extraction Bug", "Discontinuity (Type Coercion)", "State Tracking"],
+                labels: ["str", "list", "int", "bool", "float"],
                 datasets: [{
-                    data: [30, 13, 7, 7, 6, 2],
-                    backgroundColor: ["#9b59b6", "#e74c3c", "#3498db", "#e67e22", "#f39c12", "#1abc9c"]
+                    data: [44.0, 25.0, 18.8, 6.2, 6.2],
+                    backgroundColor: ["#9b59b6", "#e74c3c", "#3498db", "#e67e22", "#f39c12"]
                 }]
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
-                    title: { display: true, text: 'Root Cause Distribution (62 failures)' }
+                    title: { display: false },
+                    datalabels: {
+                        color: 'white',
+                        font: { weight: 'bold', size: 11 },
+                        formatter: (value, ctx) => {
+                            let sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                            let percentage = (value * 100 / sum).toFixed(0) + '%';
+                            return percentage;
+                        }
+                    }
                 }
-            }
+            },
+            plugins: [ChartDataLabels]
         });
     </script>
 </body>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>State-Tracking in Code World Models</title>
+    <title>Debugging Code World Models</title>
     <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
@@ -19,26 +19,26 @@
 
     <main>
         <section class="hero">
-            <h2>Understanding State-Tracking in Linear RNNs for Code Execution</h2>
-            <p>Exploring why expressivity ≠ learnability in Code World Models</p>
+            <h2>Debugging Code World Models</h2>
+            <p>Failure modes in trace-supervised code execution</p>
         </section>
 
         <section class="posts">
             <h3>Blog Post</h3>
             <article class="post-preview">
-                <h4><a href="posts/state-tracking-code-world-models.html">Why Code World Models Need State-Tracking Architectures</a></h4>
-                <p class="post-date">January 7, 2026</p>
+                <h4><a href="posts/state-tracking-code-world-models.html">Debugging CWMs: Where Traces Help (and Why They Fail)</a></h4>
+                <p class="post-date">February 2026</p>
                 <p class="post-excerpt">
-                    State-tracking is fundamental to code execution, but current transformer-based 
-                    Code World Models struggle with long-horizon tracking. We show that architectures 
-                    designed for state-tracking require state-tracking <em>data</em> to realize their 
-                    theoretical potential. Training on Python REPL traces with explicit intermediate 
-                    states dramatically improves learnability and length extrapolation.
+                    Code World Models (CWMs) learn to simulate program execution by predicting explicit
+                    runtime state after each executed command. This post analyzes their behavior through
+                    two lenses—local semantic execution and long-horizon state tracking—and identifies
+                    two dominant failure regimes: token-budget exhaustion from long traces and brittleness
+                    in string-valued state due to subword tokenization.
                 </p>
                 <div class="post-tags-preview">
                     <span class="tag-small">Code World Models</span>
-                    <span class="tag-small">Linear RNNs</span>
-                    <span class="tag-small">DeltaNet</span>
+                    <span class="tag-small">Semantic Execution</span>
+                    <span class="tag-small">Tokenization</span>
                     <span class="tag-small">State-Tracking</span>
                 </div>
             </article>

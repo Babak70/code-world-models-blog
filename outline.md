@@ -1,84 +1,60 @@
-# Blog Post Outline: State-Tracking for Code World Models
+# Blog Post Outline: Debugging Code World Models
 
 ## Story Arc
 
-**Hook**: Code World Models promise AI that truly understands program execution—but they hit a wall with long-horizon state tracking.
+**Hook**: Code World Models promise faithful code execution by predicting explicit runtime state—but their limitations are not obvious from aggregate benchmark scores.
 
-**Conflict**: Architectures exist that can theoretically do state-tracking, yet they fail in practice on real code.
+**Conflict**: CWMs look strong on many tasks, yet fail systematically in two regimes: token-budget exhaustion from long traces and brittleness in string-valued state.
 
-**Resolution**: The problem isn't just architecture—it's that state-tracking architectures need state-tracking *data* to learn.
+**Resolution**: Debugging CWMs requires separating two questions: (i) local semantic execution (do they apply operations correctly?) and (ii) long-horizon state tracking (do they propagate state over many steps?).
 
-**Implications**: For better Code World Models, we need hybrid architectures + the right training data format.
+**Implications**: Future work needs more efficient supervision and state representations aligned with program execution and data types (especially strings).
 
 ---
 
 ## Detailed Structure
 
-### 1. Introduction: The State-Tracking Problem
-- **What is state-tracking?** Variable tracking through operations
-- **Shell game analogy** - intuitive framing
-- **Why CWMs care**: Code agents, debugging, program synthesis
-- **The gap**: Current CWMs struggle with long sequences
+### 1. Introduction: What CWMs Are
+- Action + state traces as a “world model” interface
+- Why this differs from standard LMs
+- Two evaluation lenses: local semantic execution vs long-horizon state tracking
 
-### 2. The Theory-Practice Gap
-- Transformers vs RNNs: associative recall vs state-tracking
-- Linear RNNs with extended eigenvalues [-1,1] should work... but don't
-- **Key question**: Why don't theoretically superior architectures help?
+### 2. Real-Code Benchmarks: Where Errors Cluster
+- CruxEval-O + HumanEval failure breakdown
+- Regime 1: token-budget exhaustion (truncation from long traces)
+- Regime 2: string-valued state brittleness
 
-### 3. Our Key Insight: Data Format Matters
-- Standard next-token prediction lacks state information
-- **REPL traces** as the solution: code + explicit state reveals
-- Controllable difficulty: group size, reveal spacing, sequence length
-- This is the "bridge" between theory and practice
+### 3. Controlled Compositionality: Composition Across Data Types
+- Controlled “composition zoo” shows composition is reliable for non-string data
+- String compositions degrade sharply with depth
+- Takeaway: composition depth is not the bottleneck; string representation is
 
-### 4. Experimental Findings
-- **Finding 1**: Transformers collapse with sparse reveals
-  - Qwen3-0.6B finetuning results
-  - NTP vs State Reveal Supervision (SRS)
-  
-- **Finding 2**: DeltaNet[-1,1] extrapolates where transformers fail
-  - 280M parameter comparison
-  - Training from scratch with curriculum
-  - Clean separation by architecture
-  
-- **Finding 3**: Interpretability confirms theory
-  - Layer 12, Head 3 = the state-tracking head
-  - β values consistently at 2
-  - Ablation destroys capability
+### 4. Tokenization Discontinuity: Mechanism
+- Context-dependent token IDs: separators/patterns can vanish as tokens in context
+- Why this breaks deterministic string methods (e.g., find/split)
 
-### 5. Real Code Challenges
-- **Probabilistic transitions**: `random.choice()`, hidden inputs
-  - PFSA-SR formalism
-  - Theorem: Linear RNNs fail for probabilistic tracking
-  
-- **Tokenization discontinuity**: String manipulation nightmare
-  - "alphabet" → 1 token, but edit one char → 5+ tokens
-  - Cascading state update challenges
+### 5. Long-Horizon State Tracking: Permutation Tracking
+- Baseline long-horizon degradation
+- Key diagnosis: action hallucination dominates errors
+- Teacher forcing isolates state propagation and recovers long-horizon accuracy
 
-### 6. Implications for Code World Models
-- **What current CWMs do**: Dense reveals, token-expensive
-- **Where they fail**: Sparse reveals, non-determinism, strings
-- **The path forward**:
-  1. Hybrid architectures (transformer + linear RNN)
-  2. State-aware training data (LeetCode traces)
-  3. Non-linear RNNs for probabilistic code
-  4. Stable tokenization for string operations
+### 6. Interventions (Optional but Useful)
+- Expression decomposition: expose hidden intermediates (recovers a subset)
+- String decomposition: can help but risks token explosion
 
 ### 7. Conclusion
-- **Core message**: Expressivity ≠ Learnability
-- Architectures need matching data formats
-- Future CWMs: hybrids + right training data
+- Two dominant failure regimes: token budget + string brittleness
+- What teacher forcing reveals about state propagation
+- Directions: more efficient supervision + better string/state representations
 
 ---
 
 ## Key Figures Needed
 
-1. **Shell game → REPL trace** visualization (from paper Fig 1)
-2. **NTP vs SRS accuracy** across reveal spacings (Fig in paper)
-3. **Architecture comparison**: DeltaNet[-1,1] vs Transformer extrapolation
-4. **Interpretability**: β distribution, intervention analysis
-5. **Tokenization discontinuity** diagram
-6. (Optional) LeetCode trace example
+1. $S_5$ permutation tracking: baseline vs teacher forcing
+2. Composition across data types: non-string vs string degradation
+3. Tokenization discontinuity: context-dependent token IDs example
+4. Failure taxonomy: truncation + string-heavy errors
 
 ---
 
