@@ -21,6 +21,24 @@ BibTeX:
 }
 ```
 
+## Analytics and Comments
+
+This blog uses two lightweight, free integrations:
+
+- **GoatCounter** for pageview analytics (GitHub Pages friendly)
+- **Utterances** for comments (backed by GitHub Issues)
+
+### GoatCounter (pageviews)
+
+1. Create a GoatCounter site: https://www.goatcounter.com/
+2. In the HTML pages, replace `YOUR_GOATCOUNTER_CODE` in the script tag with your site code.
+
+### Utterances (comments)
+
+1. Install/configure the Utterances GitHub App for your repo: https://utteranc.es/
+2. Comments are embedded via a script tag configured with `repo="Babak70/code-world-models-blog"`.
+	The discussion thread is keyed by `issue-term="pathname"`.
+
 ## View the Blog
 
 **Live:** [https://babak70.github.io/code-world-models-blog/posts/state-tracking-code-world-models.html](https://babak70.github.io/code-world-models-blog/posts/state-tracking-code-world-models.html)
