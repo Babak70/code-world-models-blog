@@ -2,6 +2,25 @@
 
 A blog post analyzing state-tracking capabilities in Code World Models (CWMs).
 
+## Associated Paper
+
+- arXiv: https://arxiv.org/abs/2602.07672
+- PDF: https://arxiv.org/pdf/2602.07672
+
+BibTeX:
+
+```bibtex
+@misc{rahmani2026debuggingcodeworldmodels,
+	title={Debugging code world models},
+	author={Babak Rahmani},
+	year={2026},
+	eprint={2602.07672},
+	archivePrefix={arXiv},
+	primaryClass={cs.SE},
+	url={https://arxiv.org/abs/2602.07672},
+}
+```
+
 ## View the Blog
 
 **Live:** [https://babak70.github.io/code-world-models-blog/posts/state-tracking-code-world-models.html](https://babak70.github.io/code-world-models-blog/posts/state-tracking-code-world-models.html)
