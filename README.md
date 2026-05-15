@@ -6,6 +6,7 @@ A blog post analyzing state-tracking capabilities in Code World Models (CWMs).
 
 - arXiv: https://arxiv.org/abs/2602.07672
 - PDF: https://arxiv.org/pdf/2602.07672
+- arXiv (state-tracking): https://arxiv.org/abs/2602.14814
 
 BibTeX:
 
@@ -18,6 +19,13 @@ BibTeX:
 	archivePrefix={arXiv},
 	primaryClass={cs.SE},
 	url={https://arxiv.org/abs/2602.07672},
+}
+
+@article{siems2026learning,
+  title={Learning State-Tracking from Code Using Linear RNNs},
+  author={Siems, Julien and Grazzi, Riccardo and Kalinin, Kirill and Ballani, Hitesh and Rahmani, Babak},
+  journal={arXiv preprint arXiv:2602.14814},
+  year={2026}
 }
 ```
 
